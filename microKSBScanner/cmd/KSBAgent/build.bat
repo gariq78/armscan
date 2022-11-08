@@ -1,9 +1,13 @@
  ECHO ON
  cd /d "%~dp0
+  set testPath=..\test_exe\v1
+
+
  set armPath=..\..\..\arm\armAgent
  set bName=armAgent.exe
  echo %armPath%
  echo %bName%
+  echo %testPath%
  go build -o %armPath%\%bName% -ldflags "-s -w -X main.version=0.0.0.0 -X main.name=ARMAgent"
  copy settings.bin %armPath%\settings.bin
  cd %armPath%
@@ -17,6 +21,6 @@ IF EXIST "agentZip" (
        ) ELSE (
           MkDir agentZip
        )
-
-
- cd ..\..\microKSBScanner\cmd\KSBAgent
+cd..
+ xcopy "./armAgent" %testPath%\"armAgent\" /s /e /h
+  exit
