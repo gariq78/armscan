@@ -1,0 +1,64 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay
+  CONTAINER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
+  BUILD_CONTAINER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME-build
+  VERSION: 0.2.1
+
+before_script:
+  - echo $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin ksb-dev.keysystems.local:4567
+
+build:
+  stage: build
+  script:
+    - export BUILD_NUMBER="$(git rev-list HEAD --count --first-parent) $(date '+%H:%M:%S %d.%m.%Y') $CI_COMMIT_REF_SLUG"
+    - echo BUILD_NUMBER=$BUILD_NUMBER
+    - echo VERSION=$VERSION
+    # собираем файлы
+    - docker build --pull -t $BUILD_CONTAINER_IMAGE
+      --build-arg VERSION=$VERSION
+      -f build/build.Dockerfile .
+    - docker push $BUILD_CONTAINER_IMAGE
+    # запускаем внутри облегченного контейнера
+    - docker build --pull -t $CONTAINER_IMAGE
+      --build-arg BUILD_CONTAINER_IMAGE=$BUILD_CONTAINER_IMAGE
+      -f build/Dockerfile .
+    - docker push $CONTAINER_IMAGE
+
+    # создаем контейнер для того чтобы забрать скомпилированные файл
+    - docker create --name micro-ksb-scanner$CI_JOB_ID $CONTAINER_IMAGE
+    # берем собранные файл
+    - docker cp micro-ksb-scanner$CI_JOB_ID:/opt/project/ksbagent ./ksbagent
+    - docker cp micro-ksb-scanner$CI_JOB_ID:/opt/project/microksbscanner ./microksbscanner
+    # удаляем ненужный контейнер
+    - docker rm -f micro-ksb-scanner$CI_JOB_ID
+  tags:
+    - develop
+  artifacts:
+    name: "ksbagent-$CI_COMMIT_REF_SLUG"
+    expire_in: 1 week
+    paths:
+      - $CI_PROJECT_DIR/ksbagent/**/*
+      - $CI_PROJECT_DIR/microksbscanner/**/*
+    
+
+microksbscanner.ksb-server:
+  stage: deploy
+  script:
+    - mkdir -p /opt/microKSBScanner
+    - cp -r deploy/* /opt/microKSBScanner
+    - cd /opt/microKSBScanner
+    - echo BRANCH=$CI_COMMIT_REF_SLUG > .env
+    - docker-compose pull
+    - docker-compose up -d
+  except:
+    - schedules
+  tags:
+    - ksb-server
+  only:
+    - inventory
+    - master
+  when: manual

@@ -1,0 +1,11 @@
+.idea
+Dockerfile
+.gitignore
+.git
+docs/
+README.md
+.gitlab-ci.yml
+.gitlab-ci.yml.old
+builded
+deploy
+Dockerfile_*

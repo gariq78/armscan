@@ -1,0 +1,1 @@
+start c:\testArmScanner\armScanner.exe uninstall

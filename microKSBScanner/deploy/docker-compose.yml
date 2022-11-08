@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  microksbscanner:
+    restart: always
+    hostname: microksbscanner
+    image: ksb-dev.keysystems.local:4567/intgrsrv/microksbscanner:${BRANCH}
+    env_file: .env
+    ports:
+      - '3003:3003'
+      - '3004:3004'
+

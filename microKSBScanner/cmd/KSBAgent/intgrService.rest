@@ -1,0 +1,58 @@
+@host=localhost:3000/api/v1
+######################################################
+# Получение токена
+# @name token
+GET http://{{host}}/token
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="username"
+
+admin
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="password"
+
+123456
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+###
+
+######################################################
+# Получение настроек
+@authToken = {{token.response.body.$.body.access_token}}
+GET http://{{host}}/settings
+Authorization: bearer {{authToken}}
+###
+
+######################################################
+# Применение новых настроек
+POST http://{{host}}/settings
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="settings"
+
+{
+    "Agent": {
+        "ServiceAddress": "http://localhost:3000/api/v1",
+        "AdditionalServiceAddress": "",
+        "PingPeriodHours": "0",
+        "MonitoringHours": "0"
+    }
+}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+######################################################
+# Стартовать Активы
+@authToken = {{token.response.body.$.body.access_token}}
+POST http://{{host}}/assets 
+#?stamp=2020-01-31T17:43:25Z
+Authorization: bearer {{authToken}}
+
+######################################################
+# Получить Активы
+@authToken = {{token.response.body.$.body.access_token}}
+GET http://{{host}}/assets 
+#?stamp=2020-01-31T17:43:25Z
+Authorization: bearer {{authToken}}

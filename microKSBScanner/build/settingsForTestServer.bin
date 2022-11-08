@@ -1,0 +1,1 @@
+{"Agent":{"ServiceAddress":"http://ksb-dev.keysystems.local:3004/agent/api/v1","AdditionalServiceAddress":"http://ksb-dev.keysystems.local:3004/agent/api/v1","PingPeriodHours":"24","MonitoringHours":"24"}}

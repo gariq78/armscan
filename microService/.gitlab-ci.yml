@@ -1,0 +1,47 @@
+stages:
+  - build
+  - release
+
+variables:
+  GSG_RELEASE_BRANCHES: master
+  PROJECTNAME: "microTIAS"
+
+build:
+  stage: build
+  script:
+    - docker create --name gosemrelgitlabextract$CI_JOB_ID registry.gitlab.com/juhani/go-semrel-gitlab:v0.21.1
+    - docker cp gosemrelgitlabextract$CI_JOB_ID:/usr/bin/release .
+    - docker rm -f gosemrelgitlabextract$CI_JOB_ID
+
+    - ./release next-version --allow-current > .next-version
+    - cat .next-version
+    - ./release test-git --list-other-changes || true
+    - ./release test-api
+
+    - VERSION=$(<.next-version)
+
+    - echo "RELEASE_VERSION=$VERSION" > build_info
+    - echo "RELEASE_SHA=$CI_COMMIT_SHA" >> build_info
+  artifacts:
+    paths:
+      - build_info
+  only:
+    - branches
+
+release:
+  stage: release
+  script:
+    - docker create --name gosemrelgitlabextract$CI_JOB_ID registry.gitlab.com/juhani/go-semrel-gitlab:v0.21.1
+    - docker cp gosemrelgitlabextract$CI_JOB_ID:/usr/bin/release .
+    - docker rm -f gosemrelgitlabextract$CI_JOB_ID
+
+    - rm -f release_info
+    - mv build_info release_info
+    - . release_info # вот эта штука делает интересное: переменные из файла
+
+    - ./release -v
+    - ./release changelog
+    - ./release commit-and-tag CHANGELOG.md release_info
+  when: manual
+  only:
+    - branches

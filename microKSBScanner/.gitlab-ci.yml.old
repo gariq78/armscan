@@ -1,0 +1,88 @@
+stages:
+  - build
+  - deploy
+  - release
+
+variables:
+  GSG_RELEASE_BRANCHES: master
+  PROJECTNAME_AGENT: "KSBAgent"
+  PROJECTNAME_INVENTORYAGENT: "inventoryAgent"
+  PROJECTNAME_SERVICE: "microKSBScanner"
+
+build:
+  stage: build
+  script:
+    - docker create --name gosemrelgitlabextract$CI_JOB_ID registry.gitlab.com/juhani/go-semrel-gitlab:v0.21.1
+    - docker cp gosemrelgitlabextract$CI_JOB_ID:/usr/bin/release .
+    - docker rm -f gosemrelgitlabextract$CI_JOB_ID
+
+    - ./release next-version --allow-current > .next-version
+    - cat .next-version
+    - ./release test-git --list-other-changes || true
+    - ./release test-api
+
+    - VERSION=$(<.next-version)
+    - mkdir -vp builded/$VERSION
+    - ls -la
+    - make build VERSION=$VERSION PROJECTNAME=$PROJECTNAME_AGENT
+    - make build VERSION=$VERSION PROJECTNAME=$PROJECTNAME_INVENTORYAGENT
+    - make build VERSION=$VERSION PROJECTNAME=$PROJECTNAME_SERVICE
+
+    - echo "RELEASE_VERSION=$VERSION" > build_info
+    - echo "RELEASE_SHA=$CI_COMMIT_SHA" >> build_info
+  artifacts:
+    name: "$PROJECTNAME_SERVICE-$CI_COMMIT_REF_SLUG"
+    expire_in: 1 days
+    paths:
+      - .builded/**/*
+      - build_info
+  only:
+    - branches
+
+deploy_testserver:
+  stage: deploy
+  script:
+    - . build_info
+    - mkdir -p /opt/microKSBScanner
+    - cp .builded/$RELEASE_VERSION/$PROJECTNAME_SERVICE /opt/microKSBScanner
+    - cp build/settingsForTestServer.bin /opt/microKSBScanner
+    - mv /opt/microKSBScanner/settingsForTestServer.bin /opt/microKSBScanner/source.bin
+    - /opt/microKSBScanner/microKSBScanner &
+  only:
+    - branches
+  tags:
+    - ksb-server    
+  when: manual
+
+release:
+  stage: release
+  script:
+    - rm -f release_info
+    - mv build_info release_info
+    - . release_info # вот эта штука делает интересное: переменные из файла
+
+    - RELEASE_URL_AGENT="https://ksb-dev.keysystems.local/api/v4/projects/$CI_PROJECT_ID/jobs/$CI_JOB_ID/artifacts/builded/$RELEASE_VERSION/$PROJECTNAME_AGENT"
+    - RELEASE_DESC_AGENT="\"$PROJECTNAME_AGENT Linux amd64 binary\""
+    - WIN_RELEASE_URL_AGENT="https://ksb-dev.keysystems.local/api/v4/projects/$CI_PROJECT_ID/jobs/$CI_JOB_ID/artifacts/builded/$RELEASE_VERSION/$PROJECTNAME_AGENT.exe"
+    - WIN_RELEASE_DESC_AGENT="\"$PROJECTNAME_AGENT Windows amd64 binary\""
+
+    - RELEASE_URL_SERVICE="https://ksb-dev.keysystems.local/api/v4/projects/$CI_PROJECT_ID/jobs/$CI_JOB_ID/artifacts/builded/$RELEASE_VERSION/$PROJECTNAME_SERVICE"
+    - RELEASE_DESC_SERVICE="\"$PROJECTNAME_SERVICE Linux amd64 binary\""
+    - WIN_RELEASE_URL_SERVICE="https://ksb-dev.keysystems.local/api/v4/projects/$CI_PROJECT_ID/jobs/$CI_JOB_ID/artifacts/builded/$RELEASE_VERSION/$PROJECTNAME_SERVICE.exe"
+    - WIN_RELEASE_DESC_SERVICE="\"$PROJECTNAME_SERVICE Windows amd64 binary\""
+
+    - ./release -v
+    - ./release changelog
+    - ./release commit-and-tag CHANGELOG.md release_info
+    - ./release --ci-commit-tag v$RELEASE_VERSION add-download-link -n $PROJECTNAME_AGENT -u $RELEASE_URL_AGENT -d "$RELEASE_DESC_AGENT"
+    - ./release --ci-commit-tag v$RELEASE_VERSION add-download-link -n $PROJECTNAME_AGENT.exe -u $WIN_RELEASE_URL_AGENT -d "$WIN_RELEASE_DESC_AGENT"
+    - ./release --ci-commit-tag v$RELEASE_VERSION add-download-link -n $PROJECTNAME_SERVICE -u $RELEASE_URL_SERVICE -d "$RELEASE_DESC_SERVICE"
+    - ./release --ci-commit-tag v$RELEASE_VERSION add-download-link -n $PROJECTNAME_SERVICE.exe -u $WIN_RELEASE_URL_SERVICE -d "$WIN_RELEASE_DESC_SERVICE"
+  artifacts:
+    name: "$PROJECTNAME_SERVICE-$CI_COMMIT_REF_SLUG"
+    expire_in: 7 days
+    paths:
+      - .builded/**/*
+  when: manual
+  only:
+    - master
