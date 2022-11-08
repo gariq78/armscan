@@ -1,6 +1,6 @@
  ECHO ON
  cd /d "%~dp0
-  set testPath=..\test_exe\v1
+  set testPath=..\test_exe\
 
 
  set armPath=..\..\..\arm\armAgent
@@ -22,5 +22,5 @@ IF EXIST "agentZip" (
           MkDir agentZip
        )
 cd..
- xcopy "./armAgent" %testPath%\"armAgent\" /s /e /h
+ xcopy "./armAgent" %testPath%\%1%\"armAgent\" /s /e /h
   exit

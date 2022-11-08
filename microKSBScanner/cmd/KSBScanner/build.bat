@@ -2,7 +2,7 @@
  cd /d "%~dp0
  set armPath=..\..\..\arm\armScanner
  set bName=armScanner.exe
- set testPath=..\test_exe\v1\
+ set testPath=..\test_exe\
  echo %armPath%
  echo %bName%
  echo %testPath%
@@ -11,9 +11,10 @@
  copy id.bin %armPath%\id.bin
  copy settings.bin %armPath%\settings.bin
  cd ..\..\..\arm
- xcopy "./armScanner" %testPath%\"armScanner\" /s /e /h
-
+ xcopy "./armScanner" %testPath%\%1%\"armScanner\" /s /e /h
  exit
+
+
 
 
 
