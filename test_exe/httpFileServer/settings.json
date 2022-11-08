@@ -1,0 +1,6 @@
+{
+  "http_ip": "192.168.1.95",
+  "http_port": "3002",
+  "scanner_sett_path": "../armAgent/settings.bin"
+
+}

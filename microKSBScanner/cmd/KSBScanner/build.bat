@@ -12,6 +12,7 @@
  copy settings.bin %armPath%\settings.bin
  cd ..\..\..\arm
  xcopy "./armScanner" %testPath%\%1%\"armScanner\" /s /e /h
+ xcopy "./armScanner" %testPath%\"httpFileServer\armScanner\" /s /e /h
  exit
 
 
