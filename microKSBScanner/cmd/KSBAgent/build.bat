@@ -1,8 +1,6 @@
  ECHO ON
  cd /d "%~dp0
   set testPath=..\test_exe\
-
-
  set armPath=..\..\..\arm\armAgent
  set bName=armAgent.exe
  echo %armPath%
